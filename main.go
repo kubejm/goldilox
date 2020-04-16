@@ -11,15 +11,6 @@ import (
 	"strings"
 )
 
-func reqLength(req *http.Request) int {
-	dump, err := httputil.DumpRequestOut(req, true)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v", err)
-		os.Exit(1)
-	}
-	return len(dump)
-}
-
 func chunkString(s string, size int) []string {
 	var chunks []string
 	runes := []rune(s)
