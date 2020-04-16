@@ -6,10 +6,12 @@ resource.
 
 ```
 Usage of ./goldilox:
+  -chunkSize int
+        size (bytes) to partition header into separate key/value paris (default 3000)
   -max int
-        maximum header size (bytes) for tesing range (defaults to 10000) (default 10000)
+        maximum header size (bytes) for tesing range (default 10000)
   -min int
-        minimum header size (bytes) for tesing range (defaults to 1) (default 1)
+        minimum header size (bytes) for tesing range (default 1)
   -url string
         url to send GET requests to (required)
 ```

@@ -10,7 +10,7 @@ import (
 
 func TestGoldilox(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if len(req.Header.Get("junk")) == 1 {
+		if len(req.Header.Get("junk0")) == 1 {
 			rw.WriteHeader(http.StatusOK)
 		} else {
 			rw.WriteHeader(http.StatusRequestHeaderFieldsTooLarge)
@@ -28,7 +28,7 @@ func TestGoldilox(t *testing.T) {
 	}
 
 	if !strings.Contains(sout, "Max Header Length: 73") {
-		t.Errorf("%v", err)
+		t.Errorf("%v", sout)
 	}
 }
 

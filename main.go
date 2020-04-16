@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -19,9 +20,34 @@ func reqLength(req *http.Request) int {
 	return len(dump)
 }
 
-func invoke(url string, hdrLength int) int {
+func chunkString(s string, size int) []string {
+	var chunks []string
+	runes := []rune(s)
+
+	if len(runes) == 0 {
+		return []string{s}
+	}
+
+	for i := 0; i < len(runes); i += size {
+		end := i + size
+
+		if end > len(runes) {
+			end = len(runes)
+		}
+
+		chunks = append(chunks, string(runes[i:end]))
+	}
+
+	return chunks
+}
+
+func invoke(url string, hdrLength int, chunkSize int) int {
 	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Set("junk", strings.Repeat("a", hdrLength))
+
+	chunks := chunkString(strings.Repeat("a", hdrLength), chunkSize)
+	for index, chunk := range chunks {
+		req.Header.Set("junk"+strconv.Itoa(index), chunk)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -33,11 +59,11 @@ func invoke(url string, hdrLength int) int {
 	return resp.StatusCode
 }
 
-func search(url string, low int, high int) (int, error) {
+func search(url string, low int, high int, chunkSize int) (int, error) {
 	for (high - low) != 1 {
 		median := (low + high) / 2
 
-		statusCode := invoke(url, median)
+		statusCode := invoke(url, median, chunkSize)
 		okStatus := statusCode >= 200 && statusCode < 300
 
 		if okStatus {
@@ -47,14 +73,14 @@ func search(url string, low int, high int) (int, error) {
 		}
 	}
 
-	lowStatusCode := invoke(url, low)
+	lowStatusCode := invoke(url, low, chunkSize)
 	lowStatusOk := lowStatusCode >= 200 && lowStatusCode < 300
 
 	if !lowStatusOk {
 		return 0, errors.New("error: all requests failed in provided range")
 	}
 
-	highStatusCode := invoke(url, high)
+	highStatusCode := invoke(url, high, chunkSize)
 	highStatusOk := highStatusCode >= 200 && highStatusCode < 300
 
 	if highStatusOk {
@@ -70,8 +96,9 @@ func search(url string, low int, high int) (int, error) {
 
 func main() {
 	url := flag.String("url", "", "url to send GET requests to (required)")
-	min := flag.Int("min", 1, "minimum header size (bytes) for tesing range (defaults to 1)")
-	max := flag.Int("max", 10000, "maximum header size (bytes) for tesing range (defaults to 10000)")
+	min := flag.Int("min", 1, "minimum header size (bytes) for tesing range")
+	max := flag.Int("max", 10000, "maximum header size (bytes) for tesing range")
+	chunkSize := flag.Int("chunkSize", 3000, "size (bytes) to partition header into separate key/value paris")
 	flag.Parse()
 
 	if *url == "" {
@@ -84,7 +111,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	maxHdrLength, err := search(*url, *min, *max)
+	maxHdrLength, err := search(*url, *min, *max, *chunkSize)
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
