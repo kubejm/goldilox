@@ -4,8 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	//"io"
-	//"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"os"
