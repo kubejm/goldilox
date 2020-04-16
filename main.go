@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	//"io"
+	//"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -41,7 +43,7 @@ func chunkString(s string, size int) []string {
 	return chunks
 }
 
-func invoke(url string, hdrLength int, chunkSize int) int {
+func invoke(url string, hdrLength int, chunkSize int) (*http.Request, *http.Response) {
 	req, err := http.NewRequest("GET", url, nil)
 
 	chunks := chunkString(strings.Repeat("a", hdrLength), chunkSize)
@@ -56,15 +58,26 @@ func invoke(url string, hdrLength int, chunkSize int) int {
 		os.Exit(1)
 	}
 
-	return resp.StatusCode
+	return req, resp
+}
+
+func hdrLength(req *http.Request) int {
+	data, err := httputil.DumpRequest(req, false)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v", err)
+		os.Exit(1)
+	}
+
+	return len(data)
 }
 
 func search(url string, low int, high int, chunkSize int) (int, error) {
 	for (high - low) != 1 {
 		median := (low + high) / 2
 
-		statusCode := invoke(url, median, chunkSize)
-		okStatus := statusCode >= 200 && statusCode < 300
+		_, resp := invoke(url, median, chunkSize)
+		okStatus := resp.StatusCode >= 200 && resp.StatusCode < 300
 
 		if okStatus {
 			low = median
@@ -73,23 +86,21 @@ func search(url string, low int, high int, chunkSize int) (int, error) {
 		}
 	}
 
-	lowStatusCode := invoke(url, low, chunkSize)
-	lowStatusOk := lowStatusCode >= 200 && lowStatusCode < 300
+	lowReq, lowResp := invoke(url, low, chunkSize)
+	lowStatusOk := lowResp.StatusCode >= 200 && lowResp.StatusCode < 300
 
 	if !lowStatusOk {
 		return 0, errors.New("error: all requests failed in provided range")
 	}
 
-	highStatusCode := invoke(url, high, chunkSize)
-	highStatusOk := highStatusCode >= 200 && highStatusCode < 300
+	_, highResp := invoke(url, high, chunkSize)
+	highStatusOk := highResp.StatusCode >= 200 && highResp.StatusCode < 300
 
 	if highStatusOk {
 		return 0, errors.New("error: all requests succeeded in provided range")
 	}
 
-	genHdrLength := 50
-	urlLength := len(url)
-	maxHdrLength := genHdrLength + urlLength + low
+	maxHdrLength := hdrLength(lowReq)
 
 	return maxHdrLength, nil
 }

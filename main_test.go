@@ -27,7 +27,7 @@ func TestGoldilox(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 
-	if !strings.Contains(sout, "Max Header Length: 73") {
+	if !strings.Contains(sout, "Max Header Length: 51") {
 		t.Errorf("%v", sout)
 	}
 }
